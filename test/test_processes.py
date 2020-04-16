@@ -147,6 +147,7 @@ class TestProcess(utils.AsyncTestCase):
         """Process which raises in its 'define' method. Check that the spec is not set."""
 
         class BrokenProcess(Process):
+
             @classmethod
             def define(cls, spec):
                 super(BrokenProcess, cls).define(spec)
@@ -560,6 +561,32 @@ class TestProcess(utils.AsyncTestCase):
         with self.assertRaises(plumpy.ClosedError):
             proc.execute()
 
+    def test_process_scope(self):
+
+        class ProcessTaskInterleave(plumpy.Process):
+
+            @gen.coroutine
+            def task(self, steps: list):
+                steps.append('[{}] started'.format(self.pid))
+                assert plumpy.Process.current() is self
+                steps.append('[{}] sleeping'.format(self.pid))
+                yield
+                assert plumpy.Process.current() is self
+                steps.append('[{}] finishing'.format(self.pid))
+
+        p1steps = []
+        p2steps = []
+
+        @gen.coroutine
+        def do_test():
+            p1 = ProcessTaskInterleave()
+            p2 = ProcessTaskInterleave()
+            yield [p1._run_task(p1.task, p1steps), p2._run_task(p2.task, p2steps)]
+
+        self.loop.run_sync(do_test)
+        assert len(p1steps) == 3
+        assert len(p2steps) == 3
+
 
 @plumpy.auto_persist('steps_ran')
 class SavePauseProc(plumpy.Process):
@@ -864,8 +891,8 @@ class TestProcessEvents(utils.AsyncTestCase):
 
     @testing.gen_test
     def test_basic_events(self):
-        events_tester = test_utils.ProcessListenerTester(
-            process=self.proc, expected_events=('running', 'output_emitted', 'finished'))
+        events_tester = test_utils.ProcessListenerTester(process=self.proc,
+                                                         expected_events=('running', 'output_emitted', 'finished'))
         yield self.proc.step_until_terminated()
         self.assertSetEqual(events_tester.called, events_tester.expected_events)
 

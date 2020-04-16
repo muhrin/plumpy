@@ -111,7 +111,7 @@ def test_inputs_default():
     assert proc.inputs['input'] == 5
 
 
-def test_inputs_default_that_evaluate_to_false():  #pylint: disable=invalid-name
+def test_inputs_default_that_evaluate_to_false():  # pylint: disable=invalid-name
     for def_val in (True, False, 0, 1):
 
         class Proc(utils.DummyProcess):
@@ -936,3 +936,26 @@ class _RestartProcess(utils.WaitForSignalProcess):
 
     def last_step(self):
         self.out('finished', True)
+
+
+@pytest.mark.asyncio
+async def test_process_scope():
+
+    class ProcessTaskInterleave(plumpy.Process):
+
+        async def task(self, steps: list):
+            steps.append('[{}] started'.format(self.pid))
+            assert plumpy.Process.current() is self
+            steps.append('[{}] sleeping'.format(self.pid))
+            await asyncio.sleep(0.1)
+            assert plumpy.Process.current() is self
+            steps.append('[{}] finishing'.format(self.pid))
+
+    p1 = ProcessTaskInterleave()
+    p2 = ProcessTaskInterleave()
+
+    p1steps = []
+    p2steps = []
+    p1task = asyncio.create_task(p1._run_task(p1.task, p1steps))
+    p2task = asyncio.create_task(p2._run_task(p2.task, p2steps))
+    await p1task, p2task

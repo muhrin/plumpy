@@ -43,6 +43,7 @@ setup(name='plumpy',
           'dev': [
               'pip',
               'pytest>4',
+              'pytest-asyncio',
               'ipython>=4.0,<6.0',
               'twine',
               'pytest-cov',

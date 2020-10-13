@@ -241,7 +241,7 @@ class Process(StateMachine, persistence.Savable, metaclass=ProcessStateMachineMe
         self.spec().seal()
 
         self._loop = loop if loop is not None else asyncio.get_event_loop()
-        nest_asyncio.apply(self._loop)
+        # nest_asyncio.apply(self._loop)
 
         self._setup_event_hooks()
 

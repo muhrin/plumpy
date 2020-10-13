@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import asyncio
 import importlib
 import inspect
 import logging
@@ -266,3 +267,34 @@ def is_mutable_property(cls, attribute):
         return False
 
     return isinstance(attr, property) and attr.fset is not None
+
+
+
+def init():
+    """Global plumpy initialiser"""
+    import nest_asyncio
+
+    class PlumpyEventLoopPolicy(asyncio.AbstractEventLoopPolicy):
+        def __init__(self):
+            self._event_loop = asyncio.new_event_loop()
+            nest_asyncio.apply(self._event_loop)
+
+        def get_event_loop(self):
+            return self._event_loop
+
+        def set_event_loop(self, loop):
+            """Set the event loop for the current context to loop."""
+            raise NotImplementedError("Cannot set the event loop")
+
+        def new_event_loop(self):
+            """Create and return a new event loop object according to this
+            policy's rules. If there's need to set this loop as the event loop for
+            the current context, set_event_loop must be called explicitly."""
+            return self._event_loop
+
+
+    asyncio.set_event_loop_policy(PlumpyEventLoopPolicy())
+
+
+def reset():
+    asyncio.set_event_loop_policy(None)
